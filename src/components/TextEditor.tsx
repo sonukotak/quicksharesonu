@@ -1,35 +1,121 @@
 import { useState, useEffect } from 'react';
-import { FileText, AlignLeft, CheckCircle, Trash2 } from 'lucide-react';
+import { FileText, AlignLeft, CheckCircle, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-
-const STORAGE_KEY = 'quickshare-text';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function TextEditor() {
   const [text, setText] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Restore saved text on mount
+  // Fetch saved text from database on mount
   useEffect(() => {
-    const savedText = localStorage.getItem(STORAGE_KEY);
-    if (savedText) {
-      setText(savedText);
-    }
+    const fetchText = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('shared_text')
+          .select('content')
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching text:', error);
+          toast.error('Failed to load saved text');
+          return;
+        }
+
+        if (data) {
+          setText(data.content || '');
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        toast.error('Failed to load saved text');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchText();
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!text.trim()) return;
     
-    localStorage.setItem(STORAGE_KEY, text);
-    
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    setIsSaving(true);
+    try {
+      // Get the first row's id
+      const { data: existing } = await supabase
+        .from('shared_text')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing row
+        const { error } = await supabase
+          .from('shared_text')
+          .update({ content: text, updated_at: new Date().toISOString() })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new row
+        const { error } = await supabase
+          .from('shared_text')
+          .insert({ content: text });
+
+        if (error) throw error;
+      }
+
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    } catch (err) {
+      console.error('Error saving:', err);
+      toast.error('Failed to save text');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleClear = () => {
-    setText('');
-    localStorage.removeItem(STORAGE_KEY);
+  const handleClear = async () => {
+    try {
+      const { data: existing } = await supabase
+        .from('shared_text')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('shared_text')
+          .update({ content: '', updated_at: new Date().toISOString() })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      }
+
+      setText('');
+      toast.success('Text cleared');
+    } catch (err) {
+      console.error('Error clearing:', err);
+      toast.error('Failed to clear text');
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto">
+        <div className="bg-card rounded-2xl shadow-lg border border-border overflow-hidden animate-slide-up">
+          <div className="flex items-center justify-center p-12">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -41,6 +127,7 @@ export default function TextEditor() {
           </div>
           <div>
             <h2 className="text-2xl font-bold">Text</h2>
+            <p className="text-sm text-muted-foreground">Shared globally with all users</p>
           </div>
         </div>
 
@@ -74,7 +161,7 @@ export default function TextEditor() {
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!text.trim()}
+            disabled={!text.trim() || isSaving}
             className={`min-w-[140px] transition-all ${
               isSaved
                 ? 'bg-success hover:bg-success/90 text-success-foreground'
@@ -82,7 +169,9 @@ export default function TextEditor() {
             }`}
             variant={isSaved ? 'default' : 'outline'}
           >
-            {isSaved ? (
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isSaved ? (
               <>
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Text Saved
@@ -99,7 +188,7 @@ export default function TextEditor() {
         <div className="mt-4 p-4 rounded-xl bg-success/10 border border-success/20 text-center animate-fade-in">
           <p className="text-success font-medium flex items-center justify-center gap-2">
             <CheckCircle className="w-5 h-5" />
-            Your text has been saved successfully!
+            Your text has been saved globally!
           </p>
         </div>
       )}
