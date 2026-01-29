@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, AlignLeft, CheckCircle, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export default function TextEditor() {
+const TextEditor: React.FC = () => {
   const [text, setText] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -194,4 +194,6 @@ export default function TextEditor() {
       )}
     </div>
   );
-}
+};
+
+export default TextEditor;
