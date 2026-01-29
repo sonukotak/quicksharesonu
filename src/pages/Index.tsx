@@ -1,12 +1,25 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useEffect } from 'react';
+import Navbar from '@/components/Navbar';
+import TextEditor from '@/components/TextEditor';
+import Footer from '@/components/Footer';
+import { useTheme } from '@/hooks/useTheme';
 
 const Index = () => {
+  const { isDark, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    document.title = 'QuickShare - Share Text Instantly';
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen flex flex-col bg-background transition-colors duration-300">
+      <Navbar isDark={isDark} toggleTheme={toggleTheme} />
+      
+      <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
+        <TextEditor />
+      </main>
+
+      <Footer />
     </div>
   );
 };
