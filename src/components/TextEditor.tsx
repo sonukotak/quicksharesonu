@@ -1,20 +1,34 @@
-import { useState } from 'react';
-import { FileText, AlignLeft, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileText, AlignLeft, CheckCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+
+const STORAGE_KEY = 'quickshare-text';
 
 export default function TextEditor() {
   const [text, setText] = useState('');
   const [isSaved, setIsSaved] = useState(false);
 
+  // Restore saved text on mount
+  useEffect(() => {
+    const savedText = localStorage.getItem(STORAGE_KEY);
+    if (savedText) {
+      setText(savedText);
+    }
+  }, []);
+
   const handleSave = () => {
     if (!text.trim()) return;
     
-    // Save to localStorage
-    localStorage.setItem('quickshare-text', text);
+    localStorage.setItem(STORAGE_KEY, text);
     
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
+  };
+
+  const handleClear = () => {
+    setText('');
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (
@@ -47,8 +61,17 @@ export default function TextEditor() {
           </div>
         </div>
 
-        {/* Footer with Save Button */}
-        <div className="flex items-center justify-end p-6 border-t border-border bg-secondary/30">
+        {/* Footer with Save and Clear Buttons */}
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-secondary/30">
+          <Button
+            onClick={handleClear}
+            disabled={!text.trim()}
+            variant="ghost"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Clear
+          </Button>
           <Button
             onClick={handleSave}
             disabled={!text.trim()}
