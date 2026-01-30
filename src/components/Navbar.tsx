@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Menu, X, Sun, Moon, Download, LogIn, Sparkles, MessageSquare, HelpCircle } from 'lucide-react';
+import { Menu, X, Sun, Moon, Download, LogIn, MessageSquare, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LoginModal from './LoginModal';
-import UpgradeModal from './UpgradeModal';
 import HowItWorksModal from './HowItWorksModal';
 import FeedbackModal from './FeedbackModal';
 
@@ -14,7 +13,6 @@ interface NavbarProps {
 export default function Navbar({ isDark, toggleTheme }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
@@ -49,7 +47,6 @@ Visit us at: quickshare.app
   const navItems = [
     { label: 'How it works', icon: HelpCircle, onClick: () => setIsHowItWorksOpen(true) },
     { label: 'Download', icon: Download, onClick: handleDownload },
-    { label: 'Upgrade', icon: Sparkles, onClick: () => setIsUpgradeOpen(true) },
     { label: 'Feedback', icon: MessageSquare, onClick: () => setIsFeedbackOpen(true) },
   ];
 
@@ -147,7 +144,6 @@ Visit us at: quickshare.app
       </nav>
 
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
-      <UpgradeModal isOpen={isUpgradeOpen} onClose={() => setIsUpgradeOpen(false)} />
       <HowItWorksModal isOpen={isHowItWorksOpen} onClose={() => setIsHowItWorksOpen(false)} />
       <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
     </>
