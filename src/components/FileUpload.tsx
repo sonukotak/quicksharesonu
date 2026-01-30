@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, File, Trash2, Download, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -13,6 +14,14 @@ interface FileItem {
   uploaded_at: string;
 }
 
+interface UploadingFile {
+  name: string;
+  progress: number;
+  size: number;
+}
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB limit
+
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -24,7 +33,7 @@ const formatFileSize = (bytes: number): string => {
 const FileUpload: React.FC = () => {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -75,8 +84,60 @@ const FileUpload: React.FC = () => {
     setIsDragging(false);
   };
 
+  const uploadFileWithProgress = (file: File, filePath: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/shared-files/${filePath}`;
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const progress = Math.round((event.loaded / event.total) * 100);
+          setUploadingFiles(prev => 
+            prev.map(f => f.name === file.name ? { ...f, progress } : f)
+          );
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+        } else {
+          reject(new Error(`Upload failed with status ${xhr.status}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        reject(new Error('Upload failed - network error'));
+      });
+
+      xhr.addEventListener('abort', () => {
+        reject(new Error('Upload cancelled'));
+      });
+
+      xhr.open('POST', url);
+      xhr.setRequestHeader('Authorization', `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`);
+      xhr.setRequestHeader('apikey', import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+      xhr.setRequestHeader('x-upsert', 'false');
+
+      const formData = new FormData();
+      formData.append('cacheControl', '3600');
+      formData.append('', file);
+
+      xhr.send(formData);
+    });
+  };
+
   const handleUpload = async (filesToUpload: File[]) => {
-    setIsUploading(true);
+    // Check file sizes
+    const oversizedFiles = filesToUpload.filter(f => f.size > MAX_FILE_SIZE);
+    if (oversizedFiles.length > 0) {
+      toast.error(`Files over 50MB are not supported: ${oversizedFiles.map(f => f.name).join(', ')}`);
+      filesToUpload = filesToUpload.filter(f => f.size <= MAX_FILE_SIZE);
+      if (filesToUpload.length === 0) return;
+    }
+
+    // Initialize progress tracking
+    setUploadingFiles(filesToUpload.map(f => ({ name: f.name, progress: 0, size: f.size })));
 
     try {
       for (const file of filesToUpload) {
@@ -84,12 +145,8 @@ const FileUpload: React.FC = () => {
         const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
         const filePath = `${timestamp}_${safeName}`;
 
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
-          .from('shared-files')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
+        // Upload with progress tracking
+        await uploadFileWithProgress(file, filePath);
 
         // Save metadata to database
         const { error: dbError } = await supabase
@@ -108,9 +165,9 @@ const FileUpload: React.FC = () => {
       fetchFiles();
     } catch (err) {
       console.error('Upload error:', err);
-      toast.error('Failed to upload file(s)');
+      toast.error('Failed to upload file(s). Please try with smaller files.');
     } finally {
-      setIsUploading(false);
+      setUploadingFiles([]);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -207,10 +264,19 @@ const FileUpload: React.FC = () => {
               onChange={handleFileSelect}
               className="hidden"
             />
-            {isUploading ? (
-              <div className="flex flex-col items-center gap-2">
+            {uploadingFiles.length > 0 ? (
+              <div className="flex flex-col items-center gap-4 w-full max-w-md">
                 <Loader2 className="w-10 h-10 animate-spin text-brand" />
-                <p className="text-muted-foreground">Uploading...</p>
+                <p className="text-muted-foreground font-medium">Uploading...</p>
+                {uploadingFiles.map((file) => (
+                  <div key={file.name} className="w-full space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="truncate max-w-[200px]">{file.name}</span>
+                      <span className="text-muted-foreground">{file.progress}%</span>
+                    </div>
+                    <Progress value={file.progress} className="h-2" />
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
@@ -219,7 +285,7 @@ const FileUpload: React.FC = () => {
                   Drop files here or click to upload
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Any file type is accepted
+                  Max 50MB per file
                 </p>
               </div>
             )}
