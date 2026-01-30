@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      shared_files: {
+        Row: {
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          uploaded_at: string
+        }
+        Insert: {
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          uploaded_at?: string
+        }
+        Update: {
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          uploaded_at?: string
+        }
+        Relationships: []
+      }
       shared_text: {
         Row: {
           content: string
