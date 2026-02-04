@@ -1,5 +1,4 @@
-import React from 'react';
-import { useScrollReveal } from '@/hooks/useScrollReveal';
+import React, { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface ScrollRevealProps {
@@ -15,11 +14,35 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
   delay = 0,
   animation = 'fade-up',
 }) => {
-  const { ref, isVisible } = useScrollReveal({ threshold: 0.1 });
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [hasAnimated, setHasAnimated] = useState(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated) {
+          // Add delay before triggering animation
+          setTimeout(() => {
+            setIsVisible(true);
+            setHasAnimated(true);
+          }, delay);
+        }
+      },
+      { threshold: 0.05, rootMargin: '50px' }
+    );
+
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, [delay, hasAnimated]);
 
   const animationStyles: Record<string, { initial: string; visible: string }> = {
     'fade-up': {
-      initial: 'opacity-0 translate-y-8',
+      initial: 'opacity-0 translate-y-12',
       visible: 'opacity-100 translate-y-0',
     },
     'fade-in': {
@@ -27,15 +50,15 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
       visible: 'opacity-100',
     },
     'scale': {
-      initial: 'opacity-0 scale-95',
+      initial: 'opacity-0 scale-90',
       visible: 'opacity-100 scale-100',
     },
     'slide-left': {
-      initial: 'opacity-0 -translate-x-8',
+      initial: 'opacity-0 -translate-x-12',
       visible: 'opacity-100 translate-x-0',
     },
     'slide-right': {
-      initial: 'opacity-0 translate-x-8',
+      initial: 'opacity-0 translate-x-12',
       visible: 'opacity-100 translate-x-0',
     },
   };
@@ -50,7 +73,6 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
         isVisible ? visible : initial,
         className
       )}
-      style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
     </div>
