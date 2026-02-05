@@ -170,7 +170,7 @@ const QuickAdd: React.FC = () => {
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="flex-1 h-12 text-base"
+              className="flex-1 h-14 text-base px-4"
               disabled={isSubmitting}
             />
 
