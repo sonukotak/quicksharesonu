@@ -77,7 +77,7 @@ Visit us at: quickshare.app
               ))}
               <Button
                 variant="ghost"
-                className="text-brand hover:text-brand/80 font-medium"
+                className="text-primary hover:text-primary-foreground hover:bg-primary font-medium"
                 onClick={() => setIsLoginOpen(true)}
               >
                 <LogIn className="w-4 h-4 mr-2" />
@@ -128,7 +128,7 @@ Visit us at: quickshare.app
                 ))}
                 <Button
                   variant="ghost"
-                  className="justify-start text-brand hover:text-brand/80"
+                  className="justify-start text-primary hover:text-primary-foreground hover:bg-primary"
                   onClick={() => {
                     setIsLoginOpen(true);
                     setIsMobileMenuOpen(false);
